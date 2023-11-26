@@ -35,8 +35,12 @@ macro_rules! log {
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<&_>(
                 $crate::__private_api::format_args!($($arg)+),
-                lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                &$crate::__private_api::LikelyConstantArgs {
+                    level: lvl,
+                    target: $target,
+                    module_path: $crate::__private_api::module_path!(),
+                    file: $crate::__private_api::file!(),
+                },
                 $crate::__private_api::line!(),
                 &[$(($crate::__log_key!($key), &$value)),+]
             );
@@ -49,8 +53,12 @@ macro_rules! log {
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log(
                 $crate::__private_api::format_args!($($arg)+),
-                lvl,
-                &($target, $crate::__private_api::module_path!(), $crate::__private_api::file!()),
+                &$crate::__private_api::LikelyConstantArgs {
+                    level: lvl,
+                    target: $target,
+                    module_path: $crate::__private_api::module_path!(),
+                    file: $crate::__private_api::file!(),
+                },
                 $crate::__private_api::line!(),
                 (),
             );

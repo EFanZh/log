@@ -37,9 +37,8 @@ impl<'a> KVs<'a> for () {
 // Log implementation.
 
 fn log_impl(
-    args: Arguments,
-    level: Level,
-    &(target, module_path, file): &(&str, &'static str, &'static str),
+    fmt_args: Arguments,
+    const_args: &LikelyConstantArgs,
     line: u32,
     kvs: Option<&[(&str, &Value)]>,
 ) {
@@ -53,11 +52,11 @@ fn log_impl(
     let mut builder = Record::builder();
 
     builder
-        .args(args)
-        .level(level)
-        .target(target)
-        .module_path_static(Some(module_path))
-        .file_static(Some(file))
+        .args(fmt_args)
+        .level(const_args.level)
+        .target(const_args.target)
+        .module_path_static(Some(const_args.module_path))
+        .file_static(Some(const_args.file))
         .line(Some(line));
 
     #[cfg(feature = "kv_unstable")]
@@ -66,22 +65,21 @@ fn log_impl(
     crate::logger().log(&builder.build());
 }
 
-pub fn log<'a, K>(
-    args: Arguments,
-    level: Level,
-    target_module_path_and_file: &(&str, &'static str, &'static str),
-    line: u32,
-    kvs: K,
-) where
+// Group arguments that are likely constant together so that the compiler can reuse these arguments
+// between different calls.
+#[derive(Debug)]
+pub struct LikelyConstantArgs<'a> {
+    pub level: Level,
+    pub target: &'a str,
+    pub module_path: &'static str,
+    pub file: &'static str,
+}
+
+pub fn log<'a, K>(fmt_args: Arguments, const_args: &LikelyConstantArgs, line: u32, kvs: K)
+where
     K: KVs<'a>,
 {
-    log_impl(
-        args,
-        level,
-        target_module_path_and_file,
-        line,
-        kvs.into_kvs(),
-    )
+    log_impl(fmt_args, const_args, line, kvs.into_kvs())
 }
 
 pub fn enabled(level: Level, target: &str) -> bool {
