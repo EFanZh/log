@@ -15,7 +15,7 @@ pub type Value<'a> = str;
 mod sealed {
     /// Types for the `target` argument.
     pub trait Target<'a>: Copy {
-        fn into_target(self, module_path: &'a &'a str) -> &'a &'a str;
+        fn into_target(self, module_path: &'a str) -> &'a str;
     }
 
     /// Types for the `level` argument.
@@ -25,16 +25,16 @@ mod sealed {
 
     /// Types for the `kv` argument.
     pub trait KVs<'a> {
-        fn into_kvs(self) -> Option<&'a &'a [(&'a str, &'a super::Value<'a>)]>;
+        fn into_kvs(self) -> Option<&'a [(&'a str, &'a super::Value<'a>)]>;
     }
 }
 
 // Types for the `target` argument.
 
 /// Caller specified target explicitly.
-impl<'a> Target<'a> for &'a &'a str {
+impl<'a> Target<'a> for &'a str {
     #[inline]
-    fn into_target(self, _module_path: &'a &'a str) -> &'a &'a str {
+    fn into_target(self, _module_path: &'a str) -> &'a str {
         self
     }
 }
@@ -42,7 +42,7 @@ impl<'a> Target<'a> for &'a &'a str {
 /// Caller did not specified target.
 impl<'a> Target<'a> for () {
     #[inline]
-    fn into_target(self, module_path: &'a &'a str) -> &'a &'a str {
+    fn into_target(self, module_path: &'a str) -> &'a str {
         module_path
     }
 }
@@ -50,9 +50,9 @@ impl<'a> Target<'a> for () {
 // Types for the `kvs` argument.
 
 /// Caller specified key-value data explicitly.
-impl<'a> KVs<'a> for &'a &'a [(&'a str, &'a Value<'a>)] {
+impl<'a> KVs<'a> for &'a [(&'a str, &'a Value<'a>)] {
     #[inline]
-    fn into_kvs(self) -> Option<&'a &'a [(&'a str, &'a Value<'a>)]> {
+    fn into_kvs(self) -> Option<&'a [(&'a str, &'a Value<'a>)]> {
         Some(self)
     }
 }
@@ -60,7 +60,7 @@ impl<'a> KVs<'a> for &'a &'a [(&'a str, &'a Value<'a>)] {
 /// Caller did not specify key-value data.
 impl<'a> KVs<'a> for () {
     #[inline]
-    fn into_kvs(self) -> Option<&'a &'a [(&'a str, &'a Value<'a>)]> {
+    fn into_kvs(self) -> Option<&'a [(&'a str, &'a Value<'a>)]> {
         None
     }
 }
@@ -114,21 +114,13 @@ define_static_levels![
 
 // Log implementation.
 
-/// Log arguments that are not generic.
-#[derive(Debug)]
-pub struct NonGenericArgs<'a> {
-    pub module_path_and_file: &'static (&'static str, &'static str),
-    pub line: u32,
-    pub args: Arguments<'a>,
-}
-
-// Note that all argument types are selected to have sizes less than or equal to a single pointer size, which allows
-// tail call optimizations to be applied.
 fn log_impl(
-    non_generic_args: &NonGenericArgs,
-    target: &&str,
+    args: Arguments,
+    &(module_path, file): &'static (&'static str, &'static str),
+    line: u32,
+    target: &str,
     level: Level,
-    kvs: Option<&&[(&str, &Value)]>,
+    kvs: Option<&[(&str, &Value)]>,
 ) {
     #[cfg(not(feature = "kv_unstable"))]
     if kvs.is_some() {
@@ -140,12 +132,12 @@ fn log_impl(
     let mut builder = Record::builder();
 
     builder
-        .args(non_generic_args.args)
+        .args(args)
         .level(level)
         .target(target)
-        .module_path_static(Some(non_generic_args.module_path_and_file.0))
-        .file_static(Some(non_generic_args.module_path_and_file.1))
-        .line(Some(non_generic_args.line));
+        .module_path_static(Some(module_path))
+        .file_static(Some(file))
+        .line(Some(line));
 
     #[cfg(feature = "kv_unstable")]
     builder.key_values(&kvs);
@@ -154,19 +146,25 @@ fn log_impl(
 }
 
 // `#[inline(never)]` is used to prevent compiler from inlining this function so that the binary size could be kept as
-// small as possible. Also, the argument types are carefully selected so that the performance cost of this function
-// could be kept as low as possible.
+// small as possible.
 #[inline(never)]
-pub fn log<'a, T, L, K>(non_generic_args: &NonGenericArgs, target: T, level: L, kvs: K)
-where
+pub fn log<'a, T, L, K>(
+    args: Arguments,
+    module_path_and_file: &'static (&'static str, &'static str),
+    line: u32,
+    target: T,
+    level: L,
+    kvs: K,
+) where
     T: Target<'a>,
     L: LevelTrait,
     K: KVs<'a>,
 {
-    // For all possible generic arguments combinations, tail call optimization can be applied to this function call.
     log_impl(
-        non_generic_args,
-        target.into_target(&non_generic_args.module_path_and_file.0),
+        args,
+        module_path_and_file,
+        line,
+        target.into_target(module_path_and_file.0),
         level.into_level(),
         kvs.into_kvs(),
     )

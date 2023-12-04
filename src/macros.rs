@@ -22,14 +22,12 @@ macro_rules! __private_api_log_impl {
         let lvl = $lvl;
         if lvl <= $crate::STATIC_MAX_LEVEL && lvl <= $crate::max_level() {
             $crate::__private_api::log::<$target_ty, $lvl_ty, $kvs_ty>(
-                &$crate::__private_api::NonGenericArgs {
-                    module_path_and_file: &(
-                        $crate::__private_api::module_path!(),
-                        $crate::__private_api::file!(),
-                    ),
-                    line: $crate::__private_api::line!(),
-                    args: $crate::__private_api::format_args!($($arg)+),
-                },
+                $crate::__private_api::format_args!($($arg)+),
+                &(
+                    $crate::__private_api::module_path!(),
+                    $crate::__private_api::file!(),
+                ),
+                $crate::__private_api::line!(),
                 $target,
                 $lvl,
                 $kvs,
@@ -45,8 +43,7 @@ macro_rules! __private_api_log_impl {
             @impl
             $target => $target_ty,
             $lvl => $lvl_ty,
-            // Stores the parsed key value data.
-            &(&[$(($crate::__log_key!($key), (&$value as &$crate::__private_api::Value))),+] as &[_]) => &_,
+            &[$(($crate::__log_key!($key), &$value)),+] => &_, // Stores the parsed key value data.
             $($arg)+
         )
     );
@@ -90,7 +87,7 @@ macro_rules! __private_api_log_impl {
     (target: $target:expr, $($arg:tt)+) => (
         $crate::__private_api_log_impl!(
             @parse_level
-            &$target => &_, // Stores the parsed target.
+            $target => &_, // Stores the parsed target.
             $($arg)+
         )
     );
