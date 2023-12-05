@@ -3585,6 +3585,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-binary-size"
+version = "0.1.0"
+
+[[package]]
 name = "textwrap"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
