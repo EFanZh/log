@@ -1,0 +1,9 @@
+[package]
+edition = "2021"
+name = "log-benchmark"
+version = "0.1.0"
+
+[dependencies]
+log = { git = "ssh://git@github.com/EFanZh/log.git", rev = "6042ec8a85f23d7e47df66074d6427b0c01ab90f" }
+log_optimized = { git = "ssh://git@github.com/EFanZh/log.git", rev = "13152ab0e2057f7a12400d7b0a9d21c93c86c311", package = "log" }
+perf-event = "*"

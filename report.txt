@@ -1,0 +1,2 @@
+original  => cycles: 1110, instructions: 70, wall time: 310ns.
+optimized => cycles: 1126, instructions: 70, wall time: 280ns.
